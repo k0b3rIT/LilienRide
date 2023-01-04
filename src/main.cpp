@@ -10,12 +10,50 @@ const int FW_BW = 6;
 const int LE_RI = 5;
 const int SW = 1;
 
-const int MAX_WITH_JOY = 25;
+const int MAX_WITH_JOY = 40;
 
 Transmitter transmitter;
 Joystick joystick(10,2,3,11);
 DriveController driveController;
 
+boolean hadJoyInputInLastLoop;
+long lastJoyInputTimestamp;
+int lastJoyCtrlValues[2];
+
+void controllByTransmitter(int* ctrlValues, uint16_t* transmitterValues) {
+    ctrlValues[0] = (int)map(transmitterValues[FW_BW], 1050, 1890, -100, 100);
+    ctrlValues[1] = (int)map(transmitterValues[LE_RI], 1050, 1890, -100, 100) * -1;
+}
+
+void controllByJoystick(int* ctrlValues, double* joystickState) {
+    int fwbw = 0;
+    if (joystickState[0] == 1) {
+      fwbw = 1;
+    } else if (joystickState[1] == 1) {
+      fwbw = -1;
+    }
+    int lr = 0;
+    if (joystickState[2] == 1) {
+      lr = 1;
+    } else if (joystickState[3] == 1) {
+      lr = -1;
+    }
+
+    if (!hadJoyInputInLastLoop && (lr !=0 || fwbw != 0)) { //joystick pushed to some direction after a stop
+      lastJoyInputTimestamp = millis();
+      lastJoyCtrlValues[0] = fwbw;
+      lastJoyCtrlValues[1] = lr;
+      hadJoyInputInLastLoop = true;
+    } else if ((millis() - lastJoyInputTimestamp) < 500) {
+      fwbw = lastJoyCtrlValues[0];
+      lr = lastJoyCtrlValues[1];
+    } else if (lr == 0 && fwbw == 0) { //all zero
+      hadJoyInputInLastLoop = false;
+    }
+
+    ctrlValues[0] = map(fwbw, -1, 1, MAX_WITH_JOY * -1, MAX_WITH_JOY);
+    ctrlValues[1] = map(lr, -1, 1, MAX_WITH_JOY * -1, MAX_WITH_JOY);
+}
 
 void setup() {
   Serial.begin(9600);
@@ -25,18 +63,10 @@ void setup() {
 
   Serial.println("start");
 
-
-      // pinMode(4, OUTPUT);
-    // pinMode(6, OUTPUT);
-    // pinMode(7, OUTPUT);
 }
 
 // the loop function runs over and over again forever
 void loop() {
-
-  // digitalWrite(4, HIGH);
-  // analogWrite(6, map(60, 0, 100, 0, 255));
-  // digitalWrite(7, HIGH);
 
     transmitter.refreshValues();
     double* joystickState = joystick.getValues();
@@ -53,34 +83,19 @@ void loop() {
     
 
     uint16_t* values = transmitter.getValues();
-
-    int forwardBackward = 0;
-    int leftRight = 0;
+    
+    int ctrlValues[2] = {0, 0};
 
 
     if (values != NULL) {
       if (values[SW] < 1800) {
-        forwardBackward = (int)map(values[FW_BW], 1050, 1890, -100, 100);
-        leftRight = (int)map(values[LE_RI], 1050, 1890, -100, 100) * -1;
+        controllByTransmitter(ctrlValues, values);
       } else {
-        int fwbw = 0;
-        if (joystickState[0] == 1) {
-          fwbw = 1;
-        } else if (joystickState[1] == 1) {
-          fwbw = -1;
-        }
-        int lr = 0;
-        if (joystickState[2] == 1) {
-          lr = 1;
-        } else if (joystickState[3] == 1) {
-          lr = -1;
-        }
-        forwardBackward = map(fwbw, -1, 1, MAX_WITH_JOY * -1, MAX_WITH_JOY);
-        leftRight = map(lr, -1, 1, MAX_WITH_JOY * -1, MAX_WITH_JOY);
+        controllByJoystick(ctrlValues, joystickState);
       }
-     
     }
 
-    driveController.applyThrust(forwardBackward, leftRight);
+    driveController.applyThrust(ctrlValues[0], ctrlValues[1]);
 
 }
+
