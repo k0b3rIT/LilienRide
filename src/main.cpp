@@ -10,7 +10,8 @@ const int FW_BW = 6;
 const int LE_RI = 5;
 const int SW = 1;
 
-const int MAX_WITH_JOY = 40;
+const int MAX_WITH_JOY = 20;
+const int DEADZONE = 10;
 
 Transmitter transmitter;
 Joystick joystick(10,2,3,11);
@@ -21,8 +22,32 @@ long lastJoyInputTimestamp;
 int lastJoyCtrlValues[2];
 
 void controllByTransmitter(int* ctrlValues, uint16_t* transmitterValues) {
-    ctrlValues[0] = (int)map(transmitterValues[FW_BW], 1050, 1890, -100, 100);
-    ctrlValues[1] = (int)map(transmitterValues[LE_RI], 1050, 1890, -100, 100) * -1;
+    int val0 = (int)map(transmitterValues[FW_BW], 1050, 1890, -100, 100);
+    int val1 = (int)map(transmitterValues[LE_RI], 1050, 1890, -100, 100) * -1;
+
+    if (abs(val0) < DEADZONE) {
+      val0 = 0;
+    } else {
+      if (val0 > 0) {
+        val0 = val0 - DEADZONE;
+      } else {
+        val0 = val0 + DEADZONE;
+      }
+    }
+
+    if (abs(val1) < DEADZONE) {
+      val1 = 0;
+    } else {
+      if (val1 > 0) {
+        val1 = val1 - DEADZONE;
+      } else {
+        val1 = val1 + DEADZONE;
+      }
+    }
+
+    ctrlValues[0] = val0;
+    ctrlValues[1] = val1;
+
 }
 
 void controllByJoystick(int* ctrlValues, double* joystickState) {
@@ -57,10 +82,10 @@ void controllByJoystick(int* ctrlValues, double* joystickState) {
 
 void setup() {
   Serial.begin(9600);
+  driveController.enable();
   driveController.setLimit(50);
   driveController.applyThrust(0, 0);
-  driveController.enable();
-
+  
   Serial.println("start");
 
 }

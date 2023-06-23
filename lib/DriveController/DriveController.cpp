@@ -1,24 +1,22 @@
 #include "DriveController.h"
+#include <ODrive.h>
 
 
-DriveController::DriveController() {
-      leftMotor = JYQD_MSC(9, 8, 12, false);
-      rightMotor = JYQD_MSC(6, 4, 7, true);
-}
+DriveController::DriveController():
+ odrive(8, 9)
+{}
 
 void DriveController::enable() {
-    leftMotor.enable();
-    rightMotor.enable();
+    odrive.init();
 }
 
 void DriveController::disable() {
-    leftMotor.disable();
-    rightMotor.disable();
+    // leftMotor.disable();
+    // rightMotor.disable();
 }
 
 void DriveController::setLimit(int limit) {
-    leftMotor.setLimit(limit);
-    rightMotor.setLimit(limit);
+    odrive.setLimit(limit);
 }
 
 void DriveController::applyThrust(int forwardBackward, int leftRight) {
@@ -58,7 +56,8 @@ void DriveController::applyThrust(int forwardBackward, int leftRight) {
     a += rSpeed;
     // Serial.println(a);
 
-    this->leftMotor.setSpeed(lSpeed);
-    this->rightMotor.setSpeed(rSpeed);
+    // this->leftMotor.setSpeed(lSpeed);
+    // this->rightMotor.setSpeed(rSpeed);
+    this->odrive.setSpeed(lSpeed, rSpeed);
 }
 

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <JYQD_MSC.h>
+#include <ODrive.h>
 
 #ifndef DriveController_H
 #define DriveController_H
@@ -12,8 +13,7 @@ class DriveController {
     void enable();
     void disable();
     private:
-    JYQD_MSC leftMotor;
-    JYQD_MSC rightMotor;
+    ODrive odrive;
 };
 
 #endif
